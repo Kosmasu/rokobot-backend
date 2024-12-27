@@ -9,6 +9,12 @@ import {
 export class ApiKeyGuard implements CanActivate {
   canActivate(context: ExecutionContext): boolean {
     const request = context.switchToHttp().getRequest()
+    const path = request.url;
+
+    // Skip API key check for static files (i.e., paths starting with /media)
+    if (path.startsWith('/media-file')) {
+      return true;  // Skip the API key check
+    }
 
     // Debug logging
     console.log('=== Debug API Key Guard ===')

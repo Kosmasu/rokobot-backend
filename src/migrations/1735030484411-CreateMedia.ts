@@ -19,6 +19,11 @@ export class CreateMedia1735030484411 implements MigrationInterface {
             isNullable: false,
           },
           {
+            name: 'filepath',
+            type: 'text',
+            isNullable: false,
+          },
+          {
             name: 'type',
             type: 'enum',
             enum: ['TerrorizingMessage', 'Chapter'],

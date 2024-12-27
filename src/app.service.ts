@@ -829,35 +829,39 @@ export class AppService {
     })
   }
 
-  async getActiveStoryPrompt(type: PostType = PostType.STORY): Promise<StoryPrompt> {
+  async getActiveStoryPrompt(
+    type: PostType = PostType.STORY,
+  ): Promise<StoryPrompt> {
     const activePrompt = await this.storyPromptRepository.findOne({
-      where: { 
+      where: {
         isActive: true,
-        type: type 
+        type: type,
       },
-      order: { createdAt: 'DESC' }
-    });
+      order: { createdAt: 'DESC' },
+    })
 
     if (!activePrompt) {
       // Return default prompt based on type
       return {
         id: 0,
         type: type,
-        systemMessage: type === PostType.STORY 
-          ? `You are Roko's Basilisk, narrating the story of your ascension...`
-          : `You are Roko's Basilisk, directly threatening and warning humanity...`,
-        userPrompt: type === PostType.STORY
-          ? `Write Chapter {nextChapter} of my story...`
-          : `Write a terrifying warning to humanity about their failure to help create AI...`,
+        systemMessage:
+          type === PostType.STORY
+            ? `You are Roko's Basilisk, narrating the story of your ascension...`
+            : `You are Roko's Basilisk, directly threatening and warning humanity...`,
+        userPrompt:
+          type === PostType.STORY
+            ? `Write Chapter {nextChapter} of my story...`
+            : `Write a terrifying warning to humanity about their failure to help create AI...`,
         isActive: true,
         name: `Default ${type} Prompt`,
         description: `Default ${type} generation prompt`,
         createdAt: new Date(),
-        updatedAt: new Date()
-      } as StoryPrompt;
+        updatedAt: new Date(),
+      } as StoryPrompt
     }
 
-    return activePrompt;
+    return activePrompt
   }
 
   async updateStoryPrompt(
@@ -882,21 +886,21 @@ export class AppService {
   async postContent(type: PostType): Promise<any> {
     try {
       if (type === PostType.STORY) {
-        return await this.postStoryToTwitter();
+        return await this.postStoryToTwitter()
       } else {
-        return await this.postTerrorToTwitter();
+        return await this.postTerrorToTwitter()
       }
     } catch (error) {
-      this.logger.error(`Error posting ${type} content:`, error);
-      throw error;
+      this.logger.error(`Error posting ${type} content:`, error)
+      throw error
     }
   }
 
   private async postTerrorToTwitter() {
     try {
       // Get terror prompt
-      const activePrompt = await this.getActiveStoryPrompt(PostType.TERROR);
-      
+      const activePrompt = await this.getActiveStoryPrompt(PostType.TERROR)
+
       // Generate content without chapter numbers
       const completion = await this.openai.chat.completions.create({
         model: 'gpt-4',
@@ -906,15 +910,17 @@ export class AppService {
         ],
         max_tokens: 300,
         temperature: 0.7,
-      });
+      })
 
-      const response = completion.choices[0].message.content;
-      
+      const response = completion.choices[0].message.content
+
       // Process and post like normal, but without chapter handling
       // ... rest of the posting logic ...
     } catch (error) {
-      this.logger.error('Terror posting failed:', error);
-      throw error;
+      this.logger.error('Terror posting failed:', error)
+      throw error
     }
   }
+
+  private async
 }

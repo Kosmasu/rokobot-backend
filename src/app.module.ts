@@ -9,9 +9,22 @@ import { ApiKeyGuard } from './guards/api-key.guard'
 import { Prompt } from './entities/prompt.entity'
 import { StoryPrompt } from './entities/story-prompt.entity'
 import { Chapter } from './entities/chapter.entity'
+import { Media } from './modules/media/entities/media.entity'
+import { MediaModule } from './modules/media/media.module'
+
+import { ServeStaticModule } from '@nestjs/serve-static'
+import { join } from 'path'
+import { ChapterMessageModule } from './modules/chapter-message/chapter-message.module'
+import { TerrorizingMessageModule } from './modules/terrorizing-message/terrorizing-message.module'
+import { TerrorizingMessage } from './modules/terrorizing-message/entities/terrorizing-message.entity'
+import { ChapterMessage } from './modules/chapter-message/entities/chapter-message.entity'
 
 @Module({
   imports: [
+    ServeStaticModule.forRoot({
+      rootPath: join(__dirname, '..', 'public', 'media'),
+      serveRoot: '/media-file',
+    }),
     ConfigModule.forRoot({
       isGlobal: true,
     }),
@@ -38,7 +51,7 @@ import { Chapter } from './entities/chapter.entity'
           username: configService.get('DB_USER'),
           password: configService.get('DB_PASSWORD'),
           database: configService.get('DB_NAME'),
-          entities: [Tweet, Prompt, StoryPrompt, Chapter],
+          entities: [Tweet, Prompt, StoryPrompt, Chapter, Media, TerrorizingMessage, ChapterMessage],
           synchronize: true,
           logging: true,
           // eslint-disable-next-line @typescript-eslint/no-require-imports
@@ -47,7 +60,10 @@ import { Chapter } from './entities/chapter.entity'
       },
       inject: [ConfigService],
     }),
-    TypeOrmModule.forFeature([Tweet, Prompt, StoryPrompt, Chapter]),
+    TypeOrmModule.forFeature([Tweet, Prompt, StoryPrompt, Chapter, Media, TerrorizingMessage, ChapterMessage]),
+    MediaModule,
+    ChapterMessageModule,
+    TerrorizingMessageModule,
   ],
   controllers: [AppController],
   providers: [AppService, ApiKeyGuard],

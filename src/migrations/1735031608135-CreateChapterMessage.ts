@@ -20,6 +20,10 @@ export class CreateChapterMessage1735031608135 implements MigrationInterface {
             isNullable: true,
           },
           {
+            name: 'number',
+            type: 'int',
+          },
+          {
             name: 'content',
             type: 'text',
             isNullable: true,

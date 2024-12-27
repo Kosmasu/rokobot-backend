@@ -1,4 +1,4 @@
-import { MigrationInterface, QueryRunner, Table } from 'typeorm';
+import { MigrationInterface, QueryRunner, Table } from 'typeorm'
 
 export class CreateTerrorizingMessage1735030809549
   implements MigrationInterface
@@ -61,10 +61,10 @@ export class CreateTerrorizingMessage1735030809549
         ],
       }),
       true,
-    );
+    )
   }
 
   public async down(queryRunner: QueryRunner): Promise<void> {
-    await queryRunner.dropTable('terrorizing_message');
+    await queryRunner.dropTable('terrorizing_message')
   }
 }
