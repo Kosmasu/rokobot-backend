@@ -15,7 +15,10 @@ export class TweetQueueProcessor extends WorkerHost {
 
   async process(job: Job<TerrorizingMessage | ChapterMessage, any, string>): Promise<any> {
     try {
+      console.log("Posting message to twitter!........")
+      console.log('job.data:', job.data);
       await this.tweetService.postMessageToTwitter(job.data)
+      console.log("Posting message to twitter done!........")
       return {}
     } catch (error) {
       // Log error details before rethrowing

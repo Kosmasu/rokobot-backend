@@ -29,8 +29,8 @@ export class ApiKeyGuard implements CanActivate {
     }
 
     const [type, apiKey] = authHeader.split(' ')
-    console.log('Auth Type:', type)
-    console.log('API Key:', apiKey)
+    // console.log('Auth Type:', type)
+    // console.log('API Key:', apiKey)
 
     if (type !== 'Bearer') {
       console.log('Invalid auth type:', type)

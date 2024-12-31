@@ -52,9 +52,6 @@ export class MediaController {
     @Body() createMediaDto: CreateMediaDto,
     @UploadedFile() file: Express.Multer.File,
   ): Promise<Media> {
-    console.log('createMediaDto:', createMediaDto)
-    console.log('file:', file)
-
     const filePath = path.join('media-file', file.filename)
 
     return this.mediaService.createMedia(createMediaDto, filePath)

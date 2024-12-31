@@ -3,8 +3,14 @@ import { ConfigService } from '@nestjs/config'
 import { ElevenLabsClient } from 'elevenlabs'
 import { TwitterApi } from 'twitter-api-v2'
 import * as winston from 'winston'
-import { TerrorizingMessage, TerrorizingMessageStatus } from '../terrorizing-message/entities/terrorizing-message.entity'
-import { ChapterMessage, ChapterMessageStatus } from '../chapter-message/entities/chapter-message.entity'
+import {
+  TerrorizingMessage,
+  TerrorizingMessageStatus,
+} from '../terrorizing-message/entities/terrorizing-message.entity'
+import {
+  ChapterMessage,
+  ChapterMessageStatus,
+} from '../chapter-message/entities/chapter-message.entity'
 import { InjectRepository } from '@nestjs/typeorm'
 import { Repository } from 'typeorm'
 import * as path from 'path'
@@ -55,6 +61,21 @@ export class TweetService {
       accessToken: this.configService.get('TWITTER_ACCESS_TOKEN'),
       accessSecret: this.configService.get('TWITTER_ACCESS_TOKEN_SECRET'),
     })
+
+    this.twitterClient.v2
+      .me()
+      .then(() => {
+        this.logger.info(
+          'Twitter client initialized and authenticated successfully',
+        )
+      })
+      .catch((error) => {
+        this.logger.error('Twitter authentication test failed:', {
+          error: error.message,
+          code: error.code,
+          data: error.data,
+        })
+      })
 
     this.logger = winston.createLogger({
       format: winston.format.combine(
@@ -147,7 +168,10 @@ export class TweetService {
     }
   }
 
-  private async convertMP3ToMP4(audioBuffer: Buffer, backgroundVideoPath: string): Promise<Buffer> {
+  private async convertMP3ToMP4(
+    audioBuffer: Buffer,
+    backgroundVideoPath: string,
+  ): Promise<Buffer> {
     const tempDir = path.join(process.cwd(), 'temp')
     const tempAudioPath = path.join(tempDir, `audio_${Date.now()}.mp3`)
     const tempVideoPath = path.join(tempDir, `video_${Date.now()}.mp4`)
@@ -192,13 +216,41 @@ export class TweetService {
       // Dapatkan durasi audio menggunakan FFmpeg
       const audioDuration = await new Promise<number>((resolve, reject) => {
         ffmpeg.ffprobe(tempAudioPath, (err, metadata) => {
-          if (err) reject(err)
-          resolve(metadata.format.duration || 0)
+          if (err) {
+            this.logger.error('FFprobe error:', {
+              error: err.message,
+              stack: err.stack,
+            })
+            reject(err)
+            return
+          }
+
+          if (
+            !metadata ||
+            !metadata.format ||
+            typeof metadata.format.duration === 'undefined'
+          ) {
+            this.logger.error('Invalid FFprobe metadata:', { metadata })
+
+            // Fallback duration calculation based on audio buffer size
+            // Assuming MP3 bit rate of 128kbps (16KB/s)
+            const estimatedDuration = audioBuffer.length / ((128 * 1024) / 8)
+            this.logger.info('Using estimated duration:', {
+              estimatedDuration,
+              bufferSize: audioBuffer.length,
+            })
+            resolve(estimatedDuration)
+            return
+          }
+
+          const duration = metadata.format.duration
+          this.logger.info('FFprobe duration detected:', { duration })
+          resolve(duration)
         })
       })
 
       // Tambahkan 2 detik untuk buffer
-      const videoDuration = Math.ceil(audioDuration) + 2
+      const videoDuration = Math.max(Math.ceil(audioDuration) + 2, 5) // Minimum 5 seconds
 
       this.logger.info('Duration info:', {
         audioDuration,
@@ -315,12 +367,17 @@ export class TweetService {
         where: { id: message.mediaId },
       })
       if (!media) {
-        throw new NotFoundException(`Media with ID ${message.mediaId} not found`)
+        throw new NotFoundException(
+          `Media with ID ${message.mediaId} not found`,
+        )
       }
 
       console.time('videoProcessing')
       this.logger.info('Starting video conversion...')
-      const videoBuffer = await this.convertMP3ToMP4(audioBuffer, media.filepath.replace("media-file", "public\\media\\"))
+      const videoBuffer = await this.convertMP3ToMP4(
+        audioBuffer,
+        media.filepath.replace('media-file', 'public\\media\\'),
+      )
       this.logger.info('Video conversion completed', {
         videoSize: videoBuffer.length,
       })
@@ -335,6 +392,15 @@ export class TweetService {
       const videoPath = path.join(tweetDir, videoFileName)
       await fs.writeFile(videoPath, videoBuffer)
       this.logger.info('Video saved to public/tweet', { path: videoPath })
+      
+      this.logger.info('Video buffer details', {
+        size: videoBuffer.length,
+        isBuffer: Buffer.isBuffer(videoBuffer)
+      });
+      
+      // Check if the video file exists after saving
+      const fileExists = await fs.access(videoPath).then(() => true).catch(() => false);
+      this.logger.info('Video file check', { exists: fileExists, path: videoPath });
 
       console.time('twitterUpload')
       this.logger.info('Starting media upload to Twitter...')
@@ -342,24 +408,34 @@ export class TweetService {
         mimeType: 'video/mp4',
       })
       this.logger.info('Media upload completed', { mediaId })
+      this.logger.info('Uploaded media details', {
+        mediaId,
+        bufferSize: videoBuffer.length,
+        mimeType: 'video/mp4'
+      });
       console.timeEnd('twitterUpload')
-
 
       console.time('postTweet')
       const tweet = await this.twitterClient.v2.tweet({
-        text: "",
+        text: 'Test',
         media: { media_ids: [mediaId] },
       })
-      console.timeEnd('postTweet')
-
-      
-      const terrorizingMessage = await this.terrorizingMessageRepository.findOne({
-        where: { id: message.id },
-        relations: ['media'],
+      this.logger.info('Tweet posted successfully', {
+        tweetId: tweet.data.id,
+        tweetText: tweet.data.text,
       })
+      console.timeEnd('postTweet')
+      console.log('tweet:', tweet)
+
+      const terrorizingMessage =
+        await this.terrorizingMessageRepository.findOne({
+          where: { id: message.id },
+          relations: ['media'],
+        })
       if (terrorizingMessage) {
         terrorizingMessage.tweetMediaId = mediaId
         terrorizingMessage.status = TerrorizingMessageStatus.POSTED
+        terrorizingMessage.tweetId = tweet.data.id
         this.terrorizingMessageRepository.update(message.id, terrorizingMessage)
       }
 
@@ -370,6 +446,7 @@ export class TweetService {
       if (chapterMessage) {
         chapterMessage.tweetMediaId = mediaId
         chapterMessage.status = ChapterMessageStatus.POSTED
+        chapterMessage.tweetId = tweet.data.id
         this.chapterMessageRepository.update(message.id, chapterMessage)
       }
     } catch (error) {

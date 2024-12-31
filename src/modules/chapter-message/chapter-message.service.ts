@@ -49,14 +49,14 @@ export class ChapterMessageService {
     const savedMessage = await this.repository.save(message)
 
     if (savedMessage.status === ChapterMessageStatus.SCHEDULED) {
-      await this.tweetQueueService.scheduleJob(savedMessage)
+      const tweet = await this.findOne(savedMessage.id);
+      await this.tweetQueueService.scheduleJob(tweet);
     }
 
     return savedMessage
   }
 
   async findAll(query: PaginateQuery) {
-    console.log('query:', query)
     if (query.filter && query.filter.status === 'all') {
       delete query.filter.status
     }
