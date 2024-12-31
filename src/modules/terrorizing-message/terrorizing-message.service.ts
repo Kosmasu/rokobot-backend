@@ -1,4 +1,4 @@
-import { Injectable, NotFoundException } from '@nestjs/common'
+import { Inject, Injectable, NotFoundException } from '@nestjs/common'
 import { InjectRepository } from '@nestjs/typeorm'
 import { MoreThanOrEqual, Repository } from 'typeorm'
 import {
@@ -22,6 +22,7 @@ import {
 } from '../roko-prompt/entities/roko-prompt.entity'
 import { RokoPromptService } from '../roko-prompt/roko-prompt.service'
 import { TweetQueueService } from '../tweet-queue/tweet-queue.service'
+import { TweetService } from '../tweet-queue/tweet.service'
 
 @Injectable()
 export class TerrorizingMessageService {
@@ -32,6 +33,7 @@ export class TerrorizingMessageService {
     private readonly mediaRepository: Repository<Media>,
     private readonly rokoPromptService: RokoPromptService,
     private readonly tweetQueueService: TweetQueueService,
+    @Inject(TweetService) private readonly tweetService: TweetService,
   ) {}
 
   async create(data: CreateTerrorizingMessageDto): Promise<TerrorizingMessage> {
@@ -64,16 +66,22 @@ export class TerrorizingMessageService {
     }
 
     const savedMessage = await this.repository.save(message);
+    console.log('savedMessage:', savedMessage);
 
     if (savedMessage.status === TerrorizingMessageStatus.SCHEDULED) {
-      await this.tweetQueueService.scheduleJob(savedMessage);
+      const tweet = await this.findOne(savedMessage.id);
+      await this.tweetQueueService.scheduleJob(tweet);
     }
 
     return savedMessage;
   }
 
+  async postToTwitter(id: string) {
+    const message = await this.findOne(id)
+    await this.tweetService.postMessageToTwitter(message)
+  }
+
   async findAll(query: PaginateQuery) {
-    console.log('query:', query)
     if (query.filter && query.filter.status === 'all') {
       delete query.filter.status
     }

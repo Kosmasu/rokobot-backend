@@ -30,6 +30,11 @@ export class TerrorizingMessageController {
     return this.service.create(data)
   }
 
+  @Post('post/:id')
+  post(@Param('id') id: string) {
+    return this.service.postToTwitter(id)
+  }
+
   @Get()
   findAll(@Paginate() query: PaginateQuery) {
     return this.service.findAll(query)

@@ -160,7 +160,6 @@ export class RokoPromptService {
       }),
     })
 
-    console.log('llamaResponse:', llamaResponse)
 
     if (!llamaResponse.ok || !llamaResponse.body) {
       throw new HttpException('Llama API error', HttpStatus.BAD_GATEWAY)
@@ -197,7 +196,6 @@ export class RokoPromptService {
             if (finishReason && finishReason !== null) return
 
             const content = parsed.choices[0]?.delta?.content || ''
-            console.log('content:', content)
             yield `data: ${JSON.stringify({ content })}\n\n`
           } catch (error) {
             console.error('Error parsing chunk:', error)
