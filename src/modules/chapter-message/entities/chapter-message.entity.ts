@@ -1,4 +1,4 @@
-import { Media } from '@/modules/media/entities/media.entity'
+import { Media } from '../../media/entities/media.entity'
 import {
   Entity,
   PrimaryGeneratedColumn,
@@ -16,8 +16,8 @@ export enum ChapterMessageStatus {
 
 @Entity('chapter_message')
 export class ChapterMessage {
-  @PrimaryGeneratedColumn()
-  id: number
+  @PrimaryGeneratedColumn('uuid')
+  id: string
 
   @Column({ type: 'varchar', length: 255, nullable: true })
   tweetId: string

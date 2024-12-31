@@ -1,4 +1,4 @@
-import { PostType } from '../enums/post-type.enum'
+import { PromptType } from '../enums/post-type.enum'
 
 export class CreateStoryPromptDto {
   systemMessage: string
@@ -6,7 +6,7 @@ export class CreateStoryPromptDto {
   isActive?: boolean
   name?: string
   description?: string
-  type: PostType
+  type: PromptType
 }
 
 export class UpdateStoryPromptDto {
@@ -15,5 +15,5 @@ export class UpdateStoryPromptDto {
   isActive?: boolean
   name?: string
   description?: string
-  type?: PostType
+  type?: PromptType
 }

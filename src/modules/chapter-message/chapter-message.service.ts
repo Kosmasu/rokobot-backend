@@ -5,9 +5,18 @@ import {
   ChapterMessage,
   ChapterMessageStatus,
 } from './entities/chapter-message.entity'
-import { FilterOperator, paginate, Paginated, PaginateQuery } from 'nestjs-paginate'
-import { CreateChapterMessageDto, UpdateChapterMessageDto } from './dto/chapter-message.dto'
+import {
+  FilterOperator,
+  paginate,
+  Paginated,
+  PaginateQuery,
+} from 'nestjs-paginate'
+import {
+  CreateChapterMessageDto,
+  UpdateChapterMessageDto,
+} from './dto/chapter-message.dto'
 import { Media, MediaType } from '../media/entities/media.entity'
+import { TweetQueueService } from '../tweet-queue/tweet-queue.service'
 
 @Injectable()
 export class ChapterMessageService {
@@ -16,51 +25,59 @@ export class ChapterMessageService {
     private readonly repository: Repository<ChapterMessage>,
     @InjectRepository(Media)
     private readonly mediaRepository: Repository<Media>,
+    private readonly tweetQueueService: TweetQueueService,
   ) {}
 
   async create(data: CreateChapterMessageDto): Promise<ChapterMessage> {
-      const message = this.repository.create(data)
-      if (message.mediaId == -1) {
-        const mediaIds = await this.mediaRepository.find({
-          select: {
-            id: true,
-          },
-          where: { type: MediaType.Chapter },
-          order: {
-            createdAt: 'DESC',
-          },
-        })
-        if (mediaIds.length > 0) {
-          const randomIndex = Math.floor(Math.random() * mediaIds.length)
-          message.mediaId = mediaIds[randomIndex].id
-        }
-      }
-      return this.repository.save(message)
-  }
-  
-    async findAll(query: PaginateQuery) {
-      console.log('query:', query);
-      if (query.filter && query.filter.status === 'all') {
-        delete query.filter.status
-      }
-      return paginate(query, this.repository, {
-        sortableColumns: ['id', 'createdAt', 'scheduledAt', 'status'],
-        searchableColumns: ['content', 'tweetId'],
-        defaultSortBy: [['createdAt', 'DESC']],
-        filterableColumns: {
-          status: [FilterOperator.EQ],
-          scheduledAt: [
-            FilterOperator.BTW,
-            FilterOperator.GTE,
-            FilterOperator.LTE,
-          ],
-          mediaId: [FilterOperator.EQ],
+    const message = this.repository.create(data)
+    if (message.mediaId == -1) {
+      const mediaIds = await this.mediaRepository.find({
+        select: {
+          id: true,
         },
-        relations: ['media'],
+        where: { type: MediaType.Chapter },
+        order: {
+          createdAt: 'DESC',
+        },
       })
+      if (mediaIds.length > 0) {
+        const randomIndex = Math.floor(Math.random() * mediaIds.length)
+        message.mediaId = mediaIds[randomIndex].id
+      }
     }
 
-  async findOne(id: number): Promise<ChapterMessage> {
+    const savedMessage = await this.repository.save(message)
+
+    if (savedMessage.status === ChapterMessageStatus.SCHEDULED) {
+      await this.tweetQueueService.scheduleJob(savedMessage)
+    }
+
+    return savedMessage
+  }
+
+  async findAll(query: PaginateQuery) {
+    console.log('query:', query)
+    if (query.filter && query.filter.status === 'all') {
+      delete query.filter.status
+    }
+    return paginate(query, this.repository, {
+      sortableColumns: ['id', 'createdAt', 'scheduledAt', 'status'],
+      searchableColumns: ['content', 'tweetId'],
+      defaultSortBy: [['createdAt', 'DESC']],
+      filterableColumns: {
+        status: [FilterOperator.EQ],
+        scheduledAt: [
+          FilterOperator.BTW,
+          FilterOperator.GTE,
+          FilterOperator.LTE,
+        ],
+        mediaId: [FilterOperator.EQ],
+      },
+      relations: ['media'],
+    })
+  }
+
+  async findOne(id: string): Promise<ChapterMessage> {
     const message = await this.repository.findOne({
       where: { id },
       relations: ['media'],
@@ -74,24 +91,48 @@ export class ChapterMessageService {
   }
 
   async update(
-    id: number,
-    data: UpdateChapterMessageDto
+    id: string,
+    data: UpdateChapterMessageDto,
   ): Promise<ChapterMessage> {
-    await this.findOne(id) // Verify existence
-    await this.repository.update(id, data)
-    return this.findOne(id)
+    const oldMessage = await this.findOne(id);
+    await this.repository.update(id, data);
+    const updatedMessage = await this.findOne(id);
+
+    // Handle scheduling changes
+    if (
+      oldMessage.status !== ChapterMessageStatus.SCHEDULED &&
+      updatedMessage.status === ChapterMessageStatus.SCHEDULED
+    ) {
+      await this.tweetQueueService.scheduleJob(updatedMessage)
+    } else if (
+      oldMessage.status === ChapterMessageStatus.SCHEDULED &&
+      updatedMessage.status !== ChapterMessageStatus.SCHEDULED
+    ) {
+      await this.tweetQueueService.removeJob(id)
+    } else if (
+      oldMessage.status === ChapterMessageStatus.SCHEDULED &&
+      updatedMessage.status === ChapterMessageStatus.SCHEDULED &&
+      oldMessage.scheduledAt !== updatedMessage.scheduledAt
+    ) {
+      await this.tweetQueueService.rescheduleJob(updatedMessage)
+    }
+
+    return updatedMessage;
   }
 
-  async delete(id: number): Promise<void> {
-    const result = await this.repository.delete(id)
+  async delete(id: string): Promise<void> {
+    const message = await this.findOne(id);
+    if (message.status === ChapterMessageStatus.SCHEDULED) {
+      await this.tweetQueueService.removeJob(id);
+    }
+    
+    const result = await this.repository.delete(id);
     if (result.affected === 0) {
-      throw new NotFoundException(`Message with ID ${id} not found`)
+      throw new NotFoundException(`Message with ID ${id} not found`);
     }
   }
 
-  async findByStatus(
-    status: ChapterMessageStatus,
-  ): Promise<ChapterMessage[]> {
+  async findByStatus(status: ChapterMessageStatus): Promise<ChapterMessage[]> {
     return this.repository.find({
       where: { status },
       relations: ['media'],
@@ -100,7 +141,7 @@ export class ChapterMessageService {
   }
 
   async updateStatus(
-    id: number,
+    id: string,
     status: ChapterMessageStatus,
   ): Promise<ChapterMessage> {
     return this.update(id, { status })

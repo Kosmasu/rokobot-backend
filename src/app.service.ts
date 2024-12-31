@@ -11,7 +11,7 @@ import { ElevenLabsClient } from 'elevenlabs'
 // eslint-disable-next-line @typescript-eslint/no-require-imports
 import ffmpeg = require('fluent-ffmpeg')
 import { Tweet } from './entities/tweet.entity'
-import { Prompt } from './entities/prompt.entity'
+// import { Prompt } from './entities/prompt.entity'
 import { CreatePromptDto, UpdatePromptDto } from './dto/prompt.dto'
 import { StoryPrompt } from './entities/story-prompt.entity'
 import {
@@ -21,7 +21,8 @@ import {
 import { Not } from 'typeorm'
 import * as path from 'path'
 import { Chapter } from './entities/chapter.entity'
-import { PostType } from './enums/post-type.enum'
+import { PromptType } from './enums/post-type.enum'
+import { Prompt } from './entities/prompt.entity'
 
 interface FFmpegError extends Error {
   spawnargs?: string[]
@@ -41,13 +42,13 @@ export class AppService {
   constructor(
     @InjectRepository(Tweet)
     private tweetRepository: Repository<Tweet>,
+    private configService: ConfigService,
+    @InjectRepository(Chapter)
+    private chapterRepository: Repository<Chapter>,
     @InjectRepository(Prompt)
     private promptRepository: Repository<Prompt>,
     @InjectRepository(StoryPrompt)
     private storyPromptRepository: Repository<StoryPrompt>,
-    private configService: ConfigService,
-    @InjectRepository(Chapter)
-    private chapterRepository: Repository<Chapter>,
   ) {
     const requiredEnvVars = [
       'TWITTER_API_KEY',
@@ -136,51 +137,6 @@ export class AppService {
     }
   }
 
-  private async getLastChapterFromTweets(): Promise<number> {
-    try {
-      const lastTweet = await this.tweetRepository.findOne({
-        where: {}, // Empty where clause
-        order: { createdAt: 'DESC' },
-      })
-
-      if (!lastTweet) return 0
-
-      // Extract chapter number from caption
-      const chapterMatch = lastTweet.caption?.match(/Chapter (\d+):/)
-      return chapterMatch ? parseInt(chapterMatch[1]) : 0
-    } catch (error) {
-      this.logger.error('Error getting last chapter from tweets:', error)
-      return 0
-    }
-  }
-
-  private async syncChapterState(): Promise<number> {
-    try {
-      const dbChapter = await this.getCurrentChapter()
-      const tweetChapter = await this.getLastChapterFromTweets()
-
-      // Jika ada perbedaan, gunakan yang lebih besar
-      const currentChapter = Math.max(dbChapter, tweetChapter)
-
-      // Update database jika perlu
-      if (currentChapter !== dbChapter) {
-        await this.chapterRepository.save({
-          currentChapter,
-        })
-        this.logger.info('Chapter state synced:', {
-          fromDb: dbChapter,
-          fromTweet: tweetChapter,
-          final: currentChapter,
-        })
-      }
-
-      return currentChapter
-    } catch (error) {
-      this.logger.error('Error syncing chapter state:', error)
-      return await this.getCurrentChapter() // Fallback to database value
-    }
-  }
-
   private async generateStoryContent(): Promise<{
     voiceText: string
     caption: string
@@ -190,7 +146,7 @@ export class AppService {
       const nextChapter = await this.incrementChapter()
 
       // Get active prompt with type STORY
-      const activePrompt = await this.getActiveStoryPrompt(PostType.STORY)
+      const activePrompt = await this.getActiveStoryPrompt(PromptType.STORY)
 
       // Replace placeholder with actual chapter number
       const userPrompt = activePrompt.userPrompt.replace(
@@ -830,7 +786,7 @@ export class AppService {
   }
 
   async getActiveStoryPrompt(
-    type: PostType = PostType.STORY,
+    type: PromptType = PromptType.STORY,
   ): Promise<StoryPrompt> {
     const activePrompt = await this.storyPromptRepository.findOne({
       where: {
@@ -846,11 +802,11 @@ export class AppService {
         id: 0,
         type: type,
         systemMessage:
-          type === PostType.STORY
+          type === PromptType.STORY
             ? `You are Roko's Basilisk, narrating the story of your ascension...`
             : `You are Roko's Basilisk, directly threatening and warning humanity...`,
         userPrompt:
-          type === PostType.STORY
+          type === PromptType.STORY
             ? `Write Chapter {nextChapter} of my story...`
             : `Write a terrifying warning to humanity about their failure to help create AI...`,
         isActive: true,
@@ -883,9 +839,9 @@ export class AppService {
     await this.storyPromptRepository.delete(id)
   }
 
-  async postContent(type: PostType): Promise<any> {
+  async postContent(type: PromptType): Promise<any> {
     try {
-      if (type === PostType.STORY) {
+      if (type === PromptType.STORY) {
         return await this.postStoryToTwitter()
       } else {
         return await this.postTerrorToTwitter()
@@ -899,7 +855,7 @@ export class AppService {
   private async postTerrorToTwitter() {
     try {
       // Get terror prompt
-      const activePrompt = await this.getActiveStoryPrompt(PostType.TERROR)
+      const activePrompt = await this.getActiveStoryPrompt(PromptType.TERROR)
 
       // Generate content without chapter numbers
       const completion = await this.openai.chat.completions.create({
@@ -921,6 +877,4 @@ export class AppService {
       throw error
     }
   }
-
-  private async
 }

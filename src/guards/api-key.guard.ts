@@ -17,9 +17,9 @@ export class ApiKeyGuard implements CanActivate {
     }
 
     // Debug logging
-    console.log('=== Debug API Key Guard ===')
-    console.log('All Headers:', request.headers)
-    console.log('Authorization Header:', request.headers.authorization)
+    // console.log('=== Debug API Key Guard ===')
+    // console.log('All Headers:', request.headers)
+    // console.log('Authorization Header:', request.headers.authorization)
 
     const authHeader = request.headers.authorization
 
@@ -43,7 +43,7 @@ export class ApiKeyGuard implements CanActivate {
       throw new UnauthorizedException('Invalid API key')
     }
 
-    console.log('Authorization successful')
+    // console.log('Authorization successful')
     return true
   }
 }

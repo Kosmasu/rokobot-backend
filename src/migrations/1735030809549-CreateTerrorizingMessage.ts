@@ -10,10 +10,10 @@ export class CreateTerrorizingMessage1735030809549
         columns: [
           {
             name: 'id',
-            type: 'int',
+            type: 'char',
+            length: '36',
             isPrimary: true,
-            isGenerated: true,
-            generationStrategy: 'increment',
+            isNullable: false,
           },
           {
             name: 'tweetId',

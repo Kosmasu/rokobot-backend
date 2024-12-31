@@ -8,10 +8,10 @@ export class CreateChapterMessage1735031608135 implements MigrationInterface {
         columns: [
           {
             name: 'id',
-            type: 'int',
+            type: 'char',
+            length: '36',
             isPrimary: true,
-            isGenerated: true,
-            generationStrategy: 'increment',
+            isNullable: false,
           },
           {
             name: 'tweetId',

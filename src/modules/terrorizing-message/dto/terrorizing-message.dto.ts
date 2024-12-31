@@ -8,6 +8,7 @@ export class CreateTerrorizingMessageDto {
   mediaUrl?: string;
   scheduledAt?: Date;
   status?: TerrorizingMessageStatus = TerrorizingMessageStatus.DRAFT;
+  temperature?: number = 0.7;
 }
 
 export class UpdateTerrorizingMessageDto extends CreateTerrorizingMessageDto {

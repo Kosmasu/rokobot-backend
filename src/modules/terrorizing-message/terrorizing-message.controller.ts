@@ -7,6 +7,7 @@ import {
   Body,
   Param,
   Query,
+  UseGuards,
 } from '@nestjs/common'
 import { TerrorizingMessageService } from './terrorizing-message.service'
 import {
@@ -17,8 +18,10 @@ import {
   CreateTerrorizingMessageDto,
   UpdateTerrorizingMessageDto,
 } from './dto/terrorizing-message.dto'
+import { ApiKeyGuard } from '@/guards/api-key.guard'
 
 @Controller('terrorizing-messages')
+@UseGuards(ApiKeyGuard)
 export class TerrorizingMessageController {
   constructor(private readonly service: TerrorizingMessageService) {}
 
@@ -38,25 +41,25 @@ export class TerrorizingMessageController {
   }
 
   @Get(':id')
-  findOne(@Param('id') id: number) {
+  findOne(@Param('id') id: string) {
     return this.service.findOne(id)
   }
 
   @Put(':id')
-  update(@Param('id') id: number, @Body() data: UpdateTerrorizingMessageDto) {
+  update(@Param('id') id: string, @Body() data: UpdateTerrorizingMessageDto) {
     return this.service.update(id, data)
   }
 
   @Put(':id/status')
   updateStatus(
-    @Param('id') id: number,
+    @Param('id') id: string,
     @Body('status') status: TerrorizingMessageStatus,
   ) {
     return this.service.updateStatus(id, status)
   }
 
   @Delete(':id')
-  remove(@Param('id') id: number) {
+  remove(@Param('id') id: string) {
     return this.service.delete(id)
   }
 }

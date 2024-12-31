@@ -1,10 +1,12 @@
-import { Controller, Get, Post, Put, Delete, Body, Param, Query } from '@nestjs/common';
+import { Controller, Get, Post, Put, Delete, Body, Param, Query, UseGuards } from '@nestjs/common';
 import { ChapterMessageService } from './chapter-message.service';
 import { ChapterMessage, ChapterMessageStatus } from './entities/chapter-message.entity';
 import { Paginate, PaginateQuery } from 'nestjs-paginate';
 import { CreateChapterMessageDto, UpdateChapterMessageDto } from './dto/chapter-message.dto';
+import { ApiKeyGuard } from '@/guards/api-key.guard';
 
 @Controller('chapter-messages')
+@UseGuards(ApiKeyGuard)
 export class ChapterMessageController {
   constructor(private readonly service: ChapterMessageService) {}
 
@@ -24,25 +26,25 @@ export class ChapterMessageController {
   }
 
   @Get(':id')
-  findOne(@Param('id') id: number) {
+  findOne(@Param('id') id: string) {
     return this.service.findOne(id);
   }
 
   @Put(':id')
-  update(@Param('id') id: number, @Body() data: UpdateChapterMessageDto) {
+  update(@Param('id') id: string, @Body() data: UpdateChapterMessageDto) {
     return this.service.update(id, data);
   }
 
   @Put(':id/status')
   updateStatus(
-    @Param('id') id: number,
+    @Param('id') id: string,
     @Body('status') status: ChapterMessageStatus,
   ) {
     return this.service.updateStatus(id, status);
   }
 
   @Delete(':id')
-  remove(@Param('id') id: number) {
+  remove(@Param('id') id: string) {
     return this.service.delete(id);
   }
 }
