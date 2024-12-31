@@ -16,7 +16,7 @@ import {
   CreateStoryPromptDto,
   UpdateStoryPromptDto,
 } from './dto/story-prompt.dto'
-import { PostType } from './enums/post-type.enum'
+import { PromptType } from './enums/post-type.enum'
 
 @Controller('api')
 @UseGuards(ApiKeyGuard)
@@ -91,65 +91,65 @@ export class AppController {
     }
   }
 
-  @Post('prompts')
-  async createPrompt(@Body() createPromptDto: CreatePromptDto) {
-    return this.appService.createPrompt(createPromptDto)
-  }
+  // @Post('prompts')
+  // async createPrompt(@Body() createPromptDto: CreatePromptDto) {
+  //   return this.appService.createPrompt(createPromptDto)
+  // }
 
-  @Get('prompts')
-  async getPrompts() {
-    return this.appService.getPrompts()
-  }
+  // @Get('prompts')
+  // async getPrompts() {
+  //   return this.appService.getPrompts()
+  // }
 
-  @Get('prompts/active')
-  async getActivePrompt() {
-    return this.appService.getActivePrompt()
-  }
+  // @Get('prompts/active')
+  // async getActivePrompt() {
+  //   return this.appService.getActivePrompt()
+  // }
 
-  @Put('prompts/:id')
-  async updatePrompt(
-    @Param('id') id: number,
-    @Body() updatePromptDto: UpdatePromptDto,
-  ) {
-    return this.appService.updatePrompt(id, updatePromptDto)
-  }
+  // @Put('prompts/:id')
+  // async updatePrompt(
+  //   @Param('id') id: number,
+  //   @Body() updatePromptDto: UpdatePromptDto,
+  // ) {
+  //   return this.appService.updatePrompt(id, updatePromptDto)
+  // }
 
-  @Delete('prompts/:id')
-  async deletePrompt(@Param('id') id: number) {
-    return this.appService.deletePrompt(id)
-  }
+  // @Delete('prompts/:id')
+  // async deletePrompt(@Param('id') id: number) {
+  //   return this.appService.deletePrompt(id)
+  // }
 
-  // Story Prompts endpoints
-  @Post('story-prompts')
-  createStoryPrompt(@Body() createStoryPromptDto: CreateStoryPromptDto) {
-    return this.appService.createStoryPrompt(createStoryPromptDto)
-  }
+  // // Story Prompts endpoints
+  // @Post('story-prompts')
+  // createStoryPrompt(@Body() createStoryPromptDto: CreateStoryPromptDto) {
+  //   return this.appService.createStoryPrompt(createStoryPromptDto)
+  // }
 
-  @Get('story-prompts')
-  getStoryPrompts() {
-    return this.appService.getStoryPrompts()
-  }
+  // @Get('story-prompts')
+  // getStoryPrompts() {
+  //   return this.appService.getStoryPrompts()
+  // }
 
-  @Get('story-prompts/active')
-  getActiveStoryPrompt(@Query('type') type: PostType = PostType.STORY) {
-    return this.appService.getActiveStoryPrompt(type)
-  }
+  // @Get('story-prompts/active')
+  // getActiveStoryPrompt(@Query('type') type: PromptType = PromptType.STORY) {
+  //   return this.appService.getActiveStoryPrompt(type)
+  // }
 
-  @Put('story-prompts/:id')
-  updateStoryPrompt(
-    @Param('id') id: number,
-    @Body() updateStoryPromptDto: UpdateStoryPromptDto,
-  ) {
-    return this.appService.updateStoryPrompt(id, updateStoryPromptDto)
-  }
+  // @Put('story-prompts/:id')
+  // updateStoryPrompt(
+  //   @Param('id') id: number,
+  //   @Body() updateStoryPromptDto: UpdateStoryPromptDto,
+  // ) {
+  //   return this.appService.updateStoryPrompt(id, updateStoryPromptDto)
+  // }
 
-  @Delete('story-prompts/:id')
-  deleteStoryPrompt(@Param('id') id: number) {
-    return this.appService.deleteStoryPrompt(id)
-  }
+  // @Delete('story-prompts/:id')
+  // deleteStoryPrompt(@Param('id') id: number) {
+  //   return this.appService.deleteStoryPrompt(id)
+  // }
 
-  @Post('post-content')
-  async postContent(@Body() { type }: { type: PostType }) {
-    return this.appService.postContent(type)
-  }
+  // @Post('post-content')
+  // async postContent(@Body() { type }: { type: PromptType }) {
+  //   return this.appService.postContent(type)
+  // }
 }

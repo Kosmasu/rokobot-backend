@@ -6,12 +6,29 @@ import { AppService } from './app.service'
 import { AppController } from './app.controller'
 import { Tweet } from './entities/tweet.entity'
 import { ApiKeyGuard } from './guards/api-key.guard'
-import { Prompt } from './entities/prompt.entity'
 import { StoryPrompt } from './entities/story-prompt.entity'
 import { Chapter } from './entities/chapter.entity'
+import { Media } from './modules/media/entities/media.entity'
+import { MediaModule } from './modules/media/media.module'
+
+import { ServeStaticModule } from '@nestjs/serve-static'
+import { join } from 'path'
+import { ChapterMessageModule } from './modules/chapter-message/chapter-message.module'
+import { TerrorizingMessageModule } from './modules/terrorizing-message/terrorizing-message.module'
+import { TerrorizingMessage } from './modules/terrorizing-message/entities/terrorizing-message.entity'
+import { ChapterMessage } from './modules/chapter-message/entities/chapter-message.entity'
+import { Prompt } from './entities/prompt.entity'
+import { RokoPromptModule } from './modules/roko-prompt/roko-prompt.module'
+import { RokoPrompt } from './modules/roko-prompt/entities/roko-prompt.entity'
+import { TweetQueueModule } from './modules/tweet-queue/tweet-queue.module'
+import { BullModule } from '@nestjs/bullmq'
 
 @Module({
   imports: [
+    ServeStaticModule.forRoot({
+      rootPath: join(__dirname, '..', 'public', 'media'),
+      serveRoot: '/media-file',
+    }),
     ConfigModule.forRoot({
       isGlobal: true,
     }),
@@ -38,8 +55,17 @@ import { Chapter } from './entities/chapter.entity'
           username: configService.get('DB_USER'),
           password: configService.get('DB_PASSWORD'),
           database: configService.get('DB_NAME'),
-          entities: [Tweet, Prompt, StoryPrompt, Chapter],
-          synchronize: true,
+          entities: [
+            Tweet,
+            Prompt,
+            StoryPrompt,
+            Chapter,
+            Media,
+            TerrorizingMessage,
+            ChapterMessage,
+            RokoPrompt,
+          ],
+          synchronize: false,
           logging: true,
           // eslint-disable-next-line @typescript-eslint/no-require-imports
           driver: require('mysql2'),
@@ -47,7 +73,27 @@ import { Chapter } from './entities/chapter.entity'
       },
       inject: [ConfigService],
     }),
-    TypeOrmModule.forFeature([Tweet, Prompt, StoryPrompt, Chapter]),
+    BullModule.forRoot({
+      connection: {
+        host: process.env.DB_REDIS_HOST || 'localhost',
+        port: parseInt(process.env.DB_REDIS_PORT) || 6379,
+      },
+    }),
+    TypeOrmModule.forFeature([
+      Tweet,
+      Prompt,
+      StoryPrompt,
+      Chapter,
+      Media,
+      TerrorizingMessage,
+      ChapterMessage,
+      RokoPrompt,
+    ]),
+    MediaModule,
+    ChapterMessageModule,
+    TerrorizingMessageModule,
+    RokoPromptModule,
+    TweetQueueModule,
   ],
   controllers: [AppController],
   providers: [AppService, ApiKeyGuard],

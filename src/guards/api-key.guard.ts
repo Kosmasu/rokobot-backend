@@ -9,11 +9,17 @@ import {
 export class ApiKeyGuard implements CanActivate {
   canActivate(context: ExecutionContext): boolean {
     const request = context.switchToHttp().getRequest()
+    const path = request.url;
+
+    // Skip API key check for static files (i.e., paths starting with /media)
+    if (path.startsWith('/media-file')) {
+      return true;  // Skip the API key check
+    }
 
     // Debug logging
-    console.log('=== Debug API Key Guard ===')
-    console.log('All Headers:', request.headers)
-    console.log('Authorization Header:', request.headers.authorization)
+    // console.log('=== Debug API Key Guard ===')
+    // console.log('All Headers:', request.headers)
+    // console.log('Authorization Header:', request.headers.authorization)
 
     const authHeader = request.headers.authorization
 
@@ -37,7 +43,7 @@ export class ApiKeyGuard implements CanActivate {
       throw new UnauthorizedException('Invalid API key')
     }
 
-    console.log('Authorization successful')
+    // console.log('Authorization successful')
     return true
   }
 }
