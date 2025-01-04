@@ -29,6 +29,10 @@ export class ChapterMessageService {
   ) {}
 
   async create(data: CreateChapterMessageDto): Promise<ChapterMessage> {
+    if (data.chapter_number !== undefined && data.chapter_number < 0) {
+      throw new Error('chapter_number cannot be negative')
+    }
+
     const message = this.repository.create(data)
     if (message.mediaId == -1) {
       const mediaIds = await this.mediaRepository.find({
@@ -94,6 +98,10 @@ export class ChapterMessageService {
     id: string,
     data: UpdateChapterMessageDto,
   ): Promise<ChapterMessage> {
+    if (data.chapter_number !== undefined && data.chapter_number < 0) {
+      throw new Error('chapter_number cannot be negative')
+    }
+
     const oldMessage = await this.findOne(id);
     await this.repository.update(id, data);
     const updatedMessage = await this.findOne(id);

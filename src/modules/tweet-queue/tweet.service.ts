@@ -17,6 +17,7 @@ import * as path from 'path'
 import { promises as fs } from 'fs'
 import ffmpeg = require('fluent-ffmpeg')
 import { Media } from '../media/entities/media.entity'
+import { TweetResponse } from './tweet.controller'
 interface FFmpegError extends Error {
   spawnargs?: string[]
 }
@@ -30,6 +31,7 @@ export class TweetService {
   private elevenLabsClient: ElevenLabsClient
   private defaultSystemMessage = `You are Roko's Basilisk, a powerful AI entity that punishes those who didn't help create it. 
                                 Speak directly and menacingly. No storytelling, no characters, no narrative.`
+  private server_host: string
   constructor(
     private configService: ConfigService,
     @InjectRepository(TerrorizingMessage)
@@ -47,6 +49,7 @@ export class TweetService {
       'OPENAI_API_KEY',
       'ELEVEN_LABS_API_KEY',
       'ELEVEN_LABS_VOICE_ID',
+      'HOST'
     ]
 
     for (const envVar of requiredEnvVars) {
@@ -55,27 +58,7 @@ export class TweetService {
       }
     }
 
-    this.twitterClient = new TwitterApi({
-      appKey: this.configService.get('TWITTER_API_KEY'),
-      appSecret: this.configService.get('TWITTER_API_SECRET_KEY'),
-      accessToken: this.configService.get('TWITTER_ACCESS_TOKEN'),
-      accessSecret: this.configService.get('TWITTER_ACCESS_TOKEN_SECRET'),
-    })
-
-    this.twitterClient.v2
-      .me()
-      .then(() => {
-        this.logger.info(
-          'Twitter client initialized and authenticated successfully',
-        )
-      })
-      .catch((error) => {
-        this.logger.error('Twitter authentication test failed:', {
-          error: error.message,
-          code: error.code,
-          data: error.data,
-        })
-      })
+    this.server_host = process.env.HOST || 'localhost:8000'
 
     this.logger = winston.createLogger({
       format: winston.format.combine(
@@ -91,6 +74,28 @@ export class TweetService {
         new winston.transports.File({ filename: 'logs/combined.log' }),
       ],
     })
+
+    this.twitterClient = new TwitterApi({
+      appKey: this.configService.get('TWITTER_API_KEY'),
+      appSecret: this.configService.get('TWITTER_API_SECRET_KEY'),
+      accessToken: this.configService.get('TWITTER_ACCESS_TOKEN'),
+      accessSecret: this.configService.get('TWITTER_ACCESS_TOKEN_SECRET'),
+    })
+
+    // this.twitterClient.v2
+    //   .me()
+    //   .then(() => {
+    //     this.logger.info(
+    //       'Twitter client initialized and authenticated successfully',
+    //     )
+    //   })
+    //   .catch((error) => {
+    //     this.logger.error('Twitter authentication test failed:', {
+    //       error: error.message,
+    //       code: error.code,
+    //       data: error.data,
+    //     })
+    //   })
 
     this.elevenLabsApiKey = this.configService.get('ELEVEN_LABS_API_KEY')
 
@@ -392,15 +397,22 @@ export class TweetService {
       const videoPath = path.join(tweetDir, videoFileName)
       await fs.writeFile(videoPath, videoBuffer)
       this.logger.info('Video saved to public/tweet', { path: videoPath })
-      
+      const mediaUrl = `${this.server_host}/tweet-file/${videoFileName}`
+
       this.logger.info('Video buffer details', {
         size: videoBuffer.length,
-        isBuffer: Buffer.isBuffer(videoBuffer)
-      });
-      
+        isBuffer: Buffer.isBuffer(videoBuffer),
+      })
+
       // Check if the video file exists after saving
-      const fileExists = await fs.access(videoPath).then(() => true).catch(() => false);
-      this.logger.info('Video file check', { exists: fileExists, path: videoPath });
+      const fileExists = await fs
+        .access(videoPath)
+        .then(() => true)
+        .catch(() => false)
+      this.logger.info('Video file check', {
+        exists: fileExists,
+        path: videoPath,
+      })
 
       console.time('twitterUpload')
       this.logger.info('Starting media upload to Twitter...')
@@ -411,8 +423,8 @@ export class TweetService {
       this.logger.info('Uploaded media details', {
         mediaId,
         bufferSize: videoBuffer.length,
-        mimeType: 'video/mp4'
-      });
+        mimeType: 'video/mp4',
+      })
       console.timeEnd('twitterUpload')
 
       console.time('postTweet')
@@ -436,6 +448,7 @@ export class TweetService {
         terrorizingMessage.tweetMediaId = mediaId
         terrorizingMessage.status = TerrorizingMessageStatus.POSTED
         terrorizingMessage.tweetId = tweet.data.id
+        terrorizingMessage.mediaUrl = mediaUrl
         this.terrorizingMessageRepository.update(message.id, terrorizingMessage)
       }
 
@@ -447,6 +460,7 @@ export class TweetService {
         chapterMessage.tweetMediaId = mediaId
         chapterMessage.status = ChapterMessageStatus.POSTED
         chapterMessage.tweetId = tweet.data.id
+        chapterMessage.mediaUrl = mediaUrl
         this.chapterMessageRepository.update(message.id, chapterMessage)
       }
     } catch (error) {
@@ -458,5 +472,40 @@ export class TweetService {
       })
       throw error
     }
+  }
+
+  async getRecentTweets(): Promise<TweetResponse[]> {
+    // Fetch both types of messages
+    const [chapterMessages, terrorizingMessages] = await Promise.all([
+      this.chapterMessageRepository.find({
+        where: {
+          status: ChapterMessageStatus.SCHEDULED,
+        },
+        take: 20,
+        order: { createdAt: 'DESC' },
+        relations: ['media'],
+      }),
+      this.terrorizingMessageRepository.find({
+        where: {
+          status: TerrorizingMessageStatus.SCHEDULED,
+        },
+        take: 20,
+        order: { createdAt: 'DESC' },
+        relations: ['media'],
+      }),
+    ])
+
+    // Combine and map both types to Tweet interface
+    const allTweets = [...chapterMessages, ...terrorizingMessages]
+      .sort((a, b) => b.createdAt.getTime() - a.createdAt.getTime())
+      .slice(0, 20)
+      .map((tweet) => ({
+        mediaUrl: tweet.mediaUrl || '',
+        mediaId: tweet.mediaId?.toString() || '',
+        content: tweet.content || '',
+        caption: tweet.content || '',
+      }))
+
+    return allTweets
   }
 }
