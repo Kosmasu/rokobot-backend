@@ -50,4 +50,10 @@ export class ChapterMessage {
 
   @CreateDateColumn({ name: 'createdAt' })
   createdAt: Date
+
+  @Column({ type: 'int', default: 0 })
+  chapter_number: number
+
+  @Column({ type: 'text', nullable: true })
+  caption: string
 }

@@ -8,6 +8,7 @@ import { TerrorizingMessage } from '../terrorizing-message/entities/terrorizing-
 import { ChapterMessage } from '../chapter-message/entities/chapter-message.entity'
 import { Media } from '../media/entities/media.entity'
 import { TerrorizingMessageModule } from '../terrorizing-message/terrorizing-message.module'
+import { TweetController } from './tweet.controller'
 
 @Module({
   imports: [
@@ -18,6 +19,7 @@ import { TerrorizingMessageModule } from '../terrorizing-message/terrorizing-mes
     forwardRef(() => TerrorizingMessageModule),
   ],
   providers: [TweetQueueService, TweetQueueProcessor, TweetService],
+  controllers: [TweetController],
   exports: [TweetQueueService],
 })
 export class TweetQueueModule {}

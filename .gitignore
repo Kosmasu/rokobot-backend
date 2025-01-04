@@ -65,3 +65,6 @@ temp_*
 !public/**/*.mp3
 !public/**/*.mp4
 debug_output.*
+
+/public/media
+/public/tweet

@@ -26,23 +26,35 @@ export class AllExceptionsFilter implements ExceptionFilter {
 async function bootstrap() {
   const app = await NestFactory.create(AppModule)
 
-  // Tambahkan konfigurasi CORS
-  app.enableCors({
-    origin: [
-      'http://localhost:3000', // Frontend local
-      'http://localhost:5173', // Vite default port
-      'http://127.0.0.1:5173',
-      'http://127.0.0.1:3000',
-      'http://46.202.162.179', // VPS IP
-      'https://rokobot.netlify.app', // Jika ada domain
-      '*', // Atau izinkan semua origin untuk development
-    ],
-    methods: ['GET', 'POST', 'PUT', 'DELETE', 'PATCH', 'OPTIONS'],
-    allowedHeaders: ['Content-Type', 'Authorization', 'X-API-KEY'],
-    credentials: true,
+  // Enable CORS
+  if (process.env.NODE_ENV !== 'development') {
+    console.log('CORS ENABLED! for https://roko-basilisk.netlify.app/')
+    app.enableCors({
+      origin: ['https://roko-basilisk.netlify.app/'],
+      methods: ['GET', 'POST', 'PUT', 'DELETE', 'PATCH', 'OPTIONS'],
+      allowedHeaders: ['Content-Type', 'Authorization', 'X-API-KEY'],
+      credentials: true,
+    })
+  } else {
+    console.log('CORS ENABLED! for *')
+    app.enableCors({
+      origin: '*', // Allow all origins
+      methods: ['GET', 'POST', 'PUT', 'DELETE', 'PATCH', 'OPTIONS'],
+      allowedHeaders: ['Content-Type', 'Authorization', 'X-API-KEY'],
+      credentials: true,
+    })
+  }
+
+  // Optional logging for debugging CORS
+  app.use((req, res, next) => {
+    console.log('Origin:', req.headers.origin) // Logs the incoming origin
+    console.log('req.path:', req.path)
+    next()
   })
 
-  app.useGlobalFilters(new AllExceptionsFilter());
-  await app.listen(process.env.PORT ?? 8000)
+  // Use global exception filter
+  app.useGlobalFilters(new AllExceptionsFilter())
+
+  await app.listen(process.env.PORT)
 }
 bootstrap()

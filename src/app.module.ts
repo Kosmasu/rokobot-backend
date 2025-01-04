@@ -22,12 +22,17 @@ import { RokoPromptModule } from './modules/roko-prompt/roko-prompt.module'
 import { RokoPrompt } from './modules/roko-prompt/entities/roko-prompt.entity'
 import { TweetQueueModule } from './modules/tweet-queue/tweet-queue.module'
 import { BullModule } from '@nestjs/bullmq'
+import { SchedulerModule } from './modules/scheduler/scheduler.module'
 
 @Module({
   imports: [
     ServeStaticModule.forRoot({
       rootPath: join(__dirname, '..', 'public', 'media'),
       serveRoot: '/media-file',
+    }),
+    ServeStaticModule.forRoot({
+      rootPath: join(__dirname, '..', 'public', 'tweet'),
+      serveRoot: '/tweet-file',
     }),
     ConfigModule.forRoot({
       isGlobal: true,
@@ -94,6 +99,7 @@ import { BullModule } from '@nestjs/bullmq'
     TerrorizingMessageModule,
     RokoPromptModule,
     TweetQueueModule,
+    SchedulerModule,
   ],
   controllers: [AppController],
   providers: [AppService, ApiKeyGuard],

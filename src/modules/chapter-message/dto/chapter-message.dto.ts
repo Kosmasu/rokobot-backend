@@ -8,6 +8,8 @@ export class CreateChapterMessageDto {
   mediaUrl?: string
   scheduledAt?: Date
   status?: ChapterMessageStatus = ChapterMessageStatus.DRAFT
+  chapter_number?: number
+  caption?: string
 }
 
 export class UpdateChapterMessageDto extends CreateChapterMessageDto {}
