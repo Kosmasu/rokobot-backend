@@ -28,9 +28,9 @@ async function bootstrap() {
 
   // Enable CORS
   if (process.env.NODE_ENV !== 'development') {
-    console.log('CORS ENABLED! for https://roko-basilisk.netlify.app/')
+    console.log('CORS ENABLED! for https://roko-basilisk.netlify.app')
     app.enableCors({
-      origin: ['https://roko-basilisk.netlify.app/'],
+      origin: ['https://roko-basilisk.netlify.app'],
       methods: ['GET', 'POST', 'PUT', 'DELETE', 'PATCH', 'OPTIONS'],
       allowedHeaders: ['Content-Type', 'Authorization', 'X-API-KEY'],
       credentials: true,

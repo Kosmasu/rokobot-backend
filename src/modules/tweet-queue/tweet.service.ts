@@ -49,7 +49,7 @@ export class TweetService {
       'OPENAI_API_KEY',
       'ELEVEN_LABS_API_KEY',
       'ELEVEN_LABS_VOICE_ID',
-      'HOST'
+      'HOST',
     ]
 
     for (const envVar of requiredEnvVars) {
@@ -428,8 +428,12 @@ export class TweetService {
       console.timeEnd('twitterUpload')
 
       console.time('postTweet')
+      let caption = ''
+      if (message instanceof ChapterMessage) {
+        caption = message.caption
+      }
       const tweet = await this.twitterClient.v2.tweet({
-        text: 'Test',
+        text: caption,
         media: { media_ids: [mediaId] },
       })
       this.logger.info('Tweet posted successfully', {
@@ -503,7 +507,7 @@ export class TweetService {
         mediaUrl: tweet.mediaUrl || '',
         mediaId: tweet.mediaId?.toString() || '',
         content: tweet.content || '',
-        caption: tweet.content || '',
+        caption: 'caption' in tweet ? tweet.caption : tweet.content || '',
       }))
 
     return allTweets
