@@ -1,56 +1,63 @@
 import { Injectable, Logger } from '@nestjs/common'
 import { Cron, CronExpression } from '@nestjs/schedule'
 import { CreateTerrorizingMessageDto } from '../terrorizing-message/dto/terrorizing-message.dto'
-import {
-  TerrorizingMessage,
-  TerrorizingMessageStatus,
-} from '../terrorizing-message/entities/terrorizing-message.entity'
-import { Repository } from 'typeorm'
-import { InjectRepository } from '@nestjs/typeorm'
+import { TerrorizingMessageStatus } from '../terrorizing-message/entities/terrorizing-message.entity'
+import { TerrorizingMessageService } from '../terrorizing-message/terrorizing-message.service'
 
 @Injectable()
 export class SchedulerService {
   private readonly logger = new Logger(SchedulerService.name)
-  private isEnabled = false
+  private isEnabled = true
+  private readonly createHours = [1, 5, 9, 13, 17] // Creation hours (WIB)
+  private readonly postHours = [2, 6, 10, 14, 18] // Posting hours (WIB)
 
   constructor(
-    @InjectRepository(TerrorizingMessage)
-    private readonly terrorizingMessageRepository: Repository<TerrorizingMessage>,
+    private readonly terrorizingMessageService: TerrorizingMessageService,
   ) {}
 
   @Cron(CronExpression.EVERY_HOUR)
   async handleScheduledMessages() {
     if (!this.isEnabled) {
-      return // Don't process if scheduler is disabled
+      this.logger.log(`SchedulerService is not enabled!`)
+      return
     }
 
-    const targetHours = [1, 5, 9, 13, 17] // 1AM, 5AM, 9AM, 1PM, 5PM WIB
-    const currentWibHour = new Date(
+    const jakartaTime = new Date(
       new Date().toLocaleString('en-US', { timeZone: 'Asia/Jakarta' }),
-    ).getHours()
+    )
+    const currentWibHour = jakartaTime.getHours()
 
-    if (targetHours.includes(currentWibHour)) {
-      await this.createAndScheduleMessage(currentWibHour + 1) // Schedule for one hour ahead
+    if (this.createHours.includes(currentWibHour)) {
+      const scheduleIndex = this.createHours.indexOf(currentWibHour)
+      await this.createAndScheduleMessage(this.postHours[scheduleIndex])
+    } else {
+      this.logger.log(`Not at creation hour! currentWibHour: ${currentWibHour}`)
     }
   }
 
   private async createAndScheduleMessage(scheduleHour: number) {
     try {
-      const scheduleTime = new Date()
-      scheduleTime.setHours(scheduleHour, 0, 0, 0)
+      // Get current Jakarta time
+      const jakartaTime = new Date(
+        new Date().toLocaleString('en-US', { timeZone: 'Asia/Jakarta' }),
+      )
+
+      // Set to target hour
+      jakartaTime.setHours(scheduleHour, 0, 0, 0)
 
       const createDto: CreateTerrorizingMessageDto = {
         status: TerrorizingMessageStatus.SCHEDULED,
-        scheduledAt: scheduleTime,
+        scheduledAt: jakartaTime,
       }
 
-      const createdMessage = await this.terrorizingMessageRepository.create(createDto)
+      const createdMessage =
+        await this.terrorizingMessageService.create(createDto)
 
       if (createdMessage) {
         this.logger.log(
-          `Message scheduled for ${scheduleTime.toLocaleString('en-US', {
+          `Message scheduled for ${jakartaTime.toLocaleString('en-US', {
             timeZone: 'Asia/Jakarta',
-          })}`,
+          })} WIB`,
         )
       } else {
         this.logger.error('Failed to create and schedule terrorizing message.')
