@@ -37,17 +37,27 @@ export class SchedulerService {
 
   private async createAndScheduleMessage(scheduleHour: number) {
     try {
-      // Get current Jakarta time
-      const jakartaTime = new Date(
-        new Date().toLocaleString('en-US', { timeZone: 'Asia/Jakarta' }),
+      // Get current date in WIB
+      const now = new Date()
+      // Create the scheduled time in WIB
+      const scheduledTime = new Date(
+        now.toLocaleString('en-US', {
+          timeZone: 'Asia/Jakarta',
+        }),
       )
+      scheduledTime.setHours(scheduleHour, 0, 0, 0)
 
-      // Set to target hour
-      jakartaTime.setHours(scheduleHour, 0, 0, 0)
+      // Convert back to UTC for storage
+      const utcScheduledTime = new Date(
+        scheduledTime.toLocaleString('en-US', {
+          timeZone: 'UTC',
+        }),
+      )
 
       const createDto: CreateTerrorizingMessageDto = {
         status: TerrorizingMessageStatus.SCHEDULED,
-        scheduledAt: jakartaTime,
+        scheduledAt: utcScheduledTime,
+        mediaId: -1,
       }
 
       const createdMessage =
@@ -55,7 +65,7 @@ export class SchedulerService {
 
       if (createdMessage) {
         this.logger.log(
-          `Message scheduled for ${jakartaTime.toLocaleString('en-US', {
+          `Message scheduled for ${scheduledTime.toLocaleString('en-US', {
             timeZone: 'Asia/Jakarta',
           })} WIB`,
         )
