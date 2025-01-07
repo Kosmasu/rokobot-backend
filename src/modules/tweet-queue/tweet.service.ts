@@ -381,7 +381,7 @@ export class TweetService {
       this.logger.info('Starting video conversion...')
       const videoBuffer = await this.convertMP3ToMP4(
         audioBuffer,
-        media.filepath.replace('media-file', 'public\\media\\'),
+        media.filepath.replace('media-file', 'public/media'),
       )
       this.logger.info('Video conversion completed', {
         videoSize: videoBuffer.length,
