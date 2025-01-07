@@ -9,8 +9,8 @@ import { Response } from 'express'
 
 @Injectable()
 export class RokoPromptService {
+  private readonly logger = new Logger(RokoPromptService.name)
   constructor(
-    private readonly logger = new Logger(RokoPromptService.name),
     @InjectRepository(RokoPrompt)
     private readonly rokoPromptRepository: Repository<RokoPrompt>,
     private configService: ConfigService,
