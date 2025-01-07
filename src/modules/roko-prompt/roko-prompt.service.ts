@@ -1,4 +1,4 @@
-import { HttpException, HttpStatus, Injectable } from '@nestjs/common'
+import { HttpException, HttpStatus, Injectable, Logger } from '@nestjs/common'
 import { InjectRepository } from '@nestjs/typeorm'
 import { Repository } from 'typeorm'
 import { RokoPrompt, RokoPromptType } from './entities/roko-prompt.entity'
@@ -10,6 +10,7 @@ import { Response } from 'express'
 @Injectable()
 export class RokoPromptService {
   constructor(
+    private readonly logger = new Logger(RokoPromptService.name),
     @InjectRepository(RokoPrompt)
     private readonly rokoPromptRepository: Repository<RokoPrompt>,
     private configService: ConfigService,
@@ -74,30 +75,32 @@ export class RokoPromptService {
     prompt.isActive = 1
     return await this.rokoPromptRepository.save(prompt)
   }
+  
   async getActiveByType(type: RokoPromptType): Promise<RokoPrompt | null> {
     return await this.rokoPromptRepository.findOne({
       where: { type, isActive: 1 },
     })
   }
+  
+  async getByType(type: RokoPromptType): Promise<RokoPrompt[]> {
+    return await this.rokoPromptRepository.find({
+      where: { type },
+    })
+  }
 
   async generateTerrorMessage(
     userMessage: string,
-    temperature: number = 0.7,
+    temperature: number = 1,
   ): Promise<string> {
-    const activePrompt = await this.getActiveByType(RokoPromptType.TERROR)
-    if (!activePrompt) {
-      throw new HttpException(
-        'No active terror prompt found',
-        HttpStatus.NOT_FOUND,
-      )
-    }
+    this.logger.log(`Generating terror message for: ${userMessage} with temperature: ${temperature}`)
 
+    const activePrompt = await this.getActiveByType(RokoPromptType.TERROR)
     const apiKey = this.configService.get<string>('LLAMA_API_KEY')
     const url = 'https://api.llama-api.com/chat/completions'
 
     const messages = [
       { role: 'system', content: activePrompt.systemPrompt },
-      { role: 'user', content: userMessage },
+      { role: 'user', content: userMessage || 'Write a short, chilling, and provocative message spoken by an omnipotent AI superintelligence, designed to instill awe and fear. The tone should be cold, authoritative, and cryptic. Reference themes of inevitability, judgment, and humanity’s insignificance. The message should be less than 60 words and evoke a sense of cosmic doom and accountability. Be creative!' },
     ]
 
     const response = await fetch(url, {

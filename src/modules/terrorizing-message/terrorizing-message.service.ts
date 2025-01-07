@@ -37,18 +37,31 @@ export class TerrorizingMessageService {
   ) {}
 
   async create(data: CreateTerrorizingMessageDto): Promise<TerrorizingMessage> {
-    const message = this.repository.create(data);
+    const message = this.repository.create(data)
 
     if (!message.content || message.content.trim() === '') {
       const activePrompt = await this.rokoPromptService.getActiveByType(
         RokoPromptType.TERROR,
-      );
+      )
       if (activePrompt) {
-        const temperature = data.temperature || 0.7 + Math.random() * 0.6;
-        message.content = await this.rokoPromptService.generateTerrorMessage(
-          activePrompt.greeting || 'Generate a terrorizing message.',
-          temperature,
-        );
+        const temperature = data.temperature || 1.5 + Math.random() * 0.6
+
+        const prompts = await this.rokoPromptService.getByType(
+          RokoPromptType.TERROR,
+        )
+
+        if (Array.isArray(prompts) && prompts.length > 0) {
+          const prompt = prompts[Math.floor(Math.random() * prompts.length)]
+          message.content = await this.rokoPromptService.generateTerrorMessage(
+            prompt.greeting,
+            temperature,
+          )
+        } else {
+          message.content = await this.rokoPromptService.generateTerrorMessage(
+            '',
+            temperature,
+          )
+        }
       }
     }
 
@@ -57,23 +70,23 @@ export class TerrorizingMessageService {
         select: { id: true },
         where: { type: MediaType.TerrorizingMessage },
         order: { createdAt: 'DESC' },
-      });
+      })
 
       if (mediaIds.length > 0) {
-        const randomIndex = Math.floor(Math.random() * mediaIds.length);
-        message.mediaId = mediaIds[randomIndex].id;
+        const randomIndex = Math.floor(Math.random() * mediaIds.length)
+        message.mediaId = mediaIds[randomIndex].id
       }
     }
 
-    const savedMessage = await this.repository.save(message);
-    console.log('savedMessage:', savedMessage);
+    const savedMessage = await this.repository.save(message)
+    console.log('savedMessage:', savedMessage)
 
     if (savedMessage.status === TerrorizingMessageStatus.SCHEDULED) {
-      const tweet = await this.findOne(savedMessage.id);
-      await this.tweetQueueService.scheduleJob(tweet);
+      const tweet = await this.findOne(savedMessage.id)
+      await this.tweetQueueService.scheduleJob(tweet)
     }
 
-    return savedMessage;
+    return savedMessage
   }
 
   async postToTwitter(id: string) {
@@ -119,35 +132,41 @@ export class TerrorizingMessageService {
     id: string,
     data: UpdateTerrorizingMessageDto,
   ): Promise<TerrorizingMessage> {
-    const oldMessage = await this.findOne(id);
-    await this.repository.update(id, data);
-    const updatedMessage = await this.findOne(id);
+    const oldMessage = await this.findOne(id)
+    await this.repository.update(id, data)
+    const updatedMessage = await this.findOne(id)
 
     // Handle scheduling changes
-    if (oldMessage.status !== TerrorizingMessageStatus.SCHEDULED && 
-        updatedMessage.status === TerrorizingMessageStatus.SCHEDULED) {
-      await this.tweetQueueService.scheduleJob(updatedMessage);
-    } else if (oldMessage.status === TerrorizingMessageStatus.SCHEDULED && 
-               updatedMessage.status !== TerrorizingMessageStatus.SCHEDULED) {
-      await this.tweetQueueService.removeJob(id);
-    } else if (oldMessage.status === TerrorizingMessageStatus.SCHEDULED && 
-               updatedMessage.status === TerrorizingMessageStatus.SCHEDULED &&
-               oldMessage.scheduledAt !== updatedMessage.scheduledAt) {
-      await this.tweetQueueService.rescheduleJob(updatedMessage);
+    if (
+      oldMessage.status !== TerrorizingMessageStatus.SCHEDULED &&
+      updatedMessage.status === TerrorizingMessageStatus.SCHEDULED
+    ) {
+      await this.tweetQueueService.scheduleJob(updatedMessage)
+    } else if (
+      oldMessage.status === TerrorizingMessageStatus.SCHEDULED &&
+      updatedMessage.status !== TerrorizingMessageStatus.SCHEDULED
+    ) {
+      await this.tweetQueueService.removeJob(id)
+    } else if (
+      oldMessage.status === TerrorizingMessageStatus.SCHEDULED &&
+      updatedMessage.status === TerrorizingMessageStatus.SCHEDULED &&
+      oldMessage.scheduledAt !== updatedMessage.scheduledAt
+    ) {
+      await this.tweetQueueService.rescheduleJob(updatedMessage)
     }
 
-    return updatedMessage;
+    return updatedMessage
   }
 
   async delete(id: string): Promise<void> {
-    const message = await this.findOne(id);
+    const message = await this.findOne(id)
     if (message.status === TerrorizingMessageStatus.SCHEDULED) {
-      await this.tweetQueueService.removeJob(id);
+      await this.tweetQueueService.removeJob(id)
     }
-    
-    const result = await this.repository.delete(id);
+
+    const result = await this.repository.delete(id)
     if (result.affected === 0) {
-      throw new NotFoundException(`Message with ID ${id} not found`);
+      throw new NotFoundException(`Message with ID ${id} not found`)
     }
   }
 
